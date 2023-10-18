@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Calculadora de Tempo de Trabalho</title>
+</head>
+<body>
+    <h2>Calculadora de Tempo de Trabalho</h2>
+
+    <form id="formDados">
+        ID: <input type="text" id="idInput" placeholder="Digite o ID"> <br><br>
+        Nome: <input type="text" id="nomeInput" placeholder="Digite o Nome"> <br><br>
+        <textarea id="dadosInput" placeholder="Cole os dados aqui no formato: DD/MM/AAAA - HH horas MM minutos"></textarea><br><br>
+        <button type="button" onclick="processarDados()">Processar Dados</button><br><br>
+    </form>
+
+    <ul id="listaDados"></ul>
+
+    <button type="button" onclick="calcularResultados()">Calcular</button>
+
+    <p id="resultado"></p>
+
+    <textarea id="justificativaInput" placeholder="Justificar ausência caso não tenha atingido a meta"></textarea><br><br>
+    <button type="button" onclick="salvarEmBlocoDeNotas()">Salvar em Bloco de Notas</button>
+
+    <script>
+        let dados = [];
+
+        function processarDados() {
+            let id = document.getElementById("idInput").value;
+            let nome = document.getElementById("nomeInput").value;
+            let dadosInput = document.getElementById("dadosInput").value;
+            let dadosSeparados = dadosInput.split('\n');
+            dados = dados.concat(dadosSeparados.map(item => {
+                return { id: id, nome: nome, dados: item };
+            }));
+            exibirDados();
+        }
+
+        function exibirDados() {
+            let lista = document.getElementById("listaDados");
+            lista.innerHTML = "";
+            dados.forEach(item => {
+                let li = document.createElement("li");
+                li.appendChild(document.createTextNode(item.dados));
+                lista.appendChild(li);
+            });
+        }
+
+        function calcularResultados() {
+            let totalHoras = 0;
+            let totalDias = [];
+
+            dados.forEach(item => {
+                let partes = item.dados.split(' - ');
+                if (partes.length === 2) {
+                    let data = partes[0];
+                    let tempo = partes[1].split(' horas ');
+                    if (tempo.length !== 2) return;
+                    let horas = parseInt(tempo[0]);
+                    let minutos = parseInt(tempo[1].split(' minutos')[0]);
+                    let tempoTotal = horas + minutos / 60;
+                    totalHoras += tempoTotal;
+
+                    if (!totalDias.includes(data)) {
+                        totalDias.push(data);
+                    }
+                }
+            });
+
+            let atingiuMetaHoras = totalHoras >= 7;
+            let atingiuMetaDias = totalDias.length >= 3;
+
+            let resultado = `Tempo total trabalhado: ${totalHoras.toFixed(2)} horas.`;
+            resultado += `<br>`;
+            resultado += `Dias trabalhados: ${totalDias.length}.`;
+            resultado += `<br>`;
+
+            if (atingiuMetaHoras) {
+                resultado += `A meta de 7 horas foi batida. `;
+            } else {
+                resultado += `A meta de 7 horas não foi batida. `;
+            }
+
+            if (atingiuMetaDias) {
+                resultado += `A meta de 3 dias foi batida. `;
+            } else {
+                resultado += `A meta de 3 dias não foi batida. `;
+            }
+
+            let justificativa = document.getElementById("justificativaInput").value;
+            resultado += `Justificativa: ${justificativa}`;
+
+            document.getElementById("resultado").innerHTML = resultado;
+        }
+
+        function salvarEmBlocoDeNotas() {
+            let conteudo = `ID: ${document.getElementById("idInput").value}\n`;
+            conteudo += `Nome: ${document.getElementById("nomeInput").value}\n\n`;
+            conteudo += `${document.getElementById("resultado").innerText}`;
+            if (document.getElementById("justificativaInput").value.trim() !== '') {
+                conteudo += `\nJustificativa: ${document.getElementById("justificativaInput").value}`;
+            }
+            let blob = new Blob([conteudo], { type: 'text/plain' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = `${document.getElementById("idInput").value}_${document.getElementById("nomeInput").value}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
