@@ -1,145 +1,102 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Controle de ponto HRD</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ponto HRD</title>
 </head>
 <body>
-     <center>
-        
-        <a href="https://tairritadotio.github.io/farmacia/">Farmacia</a>
-        <a href="https://tairritadotio.github.io/ponto3/">Ponto3</a>
-        <a href="https://tairritadotio.github.io/ponto4/">Ponto4</a>
-    </center>
-    <h2>Controle de ponto HRD</h2>
 
-    <form id="formDados">
-        ID: <input type="text" id="idInput" placeholder="Digite o ID"> <br><br>
-        Nome: <input type="text" id="nomeInput" placeholder="Digite o Nome"> <br><br>
-        Função: <input type="text" id="funcaoInput" placeholder="Digite a Função"> <br><br>
-        <textarea id="dadosInput" placeholder="Cole os dados aqui no formato: DD/MM/AAAA - HH horas MM minutos"></textarea><br><br>
-        <button type="button" onclick="processarDados()">Processar Dados</button><br><br>
-    </form>
+    <label for="id"><b>ID:</b></label>
+    <input type="text" id="id">
+    <br>
+    <label for="nome"><b>Nome:</b></label>
+    <input type="text" id="nome">
+    <br>
+    <label for="funcao"><b>Função:</b></label>
+    <input type="text" id="funcao">
+    <br>
 
-    <ul id="listaDados"></ul>
+    <h2>Horário de Ponto</h2>
+    <label for="dataEntrada"><b>Data de Entrada:</b></label>
+    <input type="date" id="dataEntrada">
+    <br>
+    <label for="horaInicio"><b>Hora de Entrada (HH:MM):</b></label>
+    <input type="text" id="horaInicio" placeholder="00:00" value="00:00">
+    <br>
+    <label for="dataSaida"><b>Data de Saída:</b></label>
+    <input type="date" id="dataSaida">
+    <br>
+    <label for="horaFechamento"><b>Hora de Saída (HH:MM):</b></label>
+    <input type="text" id="horaFechamento" placeholder="00:00" value="00:00">
+    <br>
+    <button onclick="calcularTempoPonto()">Calcular Horário de Ponto</button>
+    <button onclick="salvarResultado()">Salvar Resultado</button>
 
-    <button type="button" onclick="calcularResultados()">Calcular</button>
-
-    <p id="resultado"></p>
-
-    <textarea id="justificativaInput" placeholder="Justificar ausência caso não tenha atingido a meta"></textarea><br><br>
-    <button type="button" onclick="salvarEmBlocoDeNotas()">Salvar em Bloco de Notas</button>
+    <div id="resultadoPonto">
+        <p><b>Resultado do Horário de Ponto: </b><span id="resultadoHoraPonto"></span></p>
+        <p><b>Data e Hora: </b><span id="dataHoraPonto"></span></p>
+    </div>
 
     <script>
-        let dados = [];
+        let resultadoPonto = "";
 
-        function processarDados() {
-            let id = document.getElementById("idInput").value;
-            let nome = document.getElementById("nomeInput").value;
-            let funcao = document.getElementById("funcaoInput").value;
-            let dadosInput = document.getElementById("dadosInput").value;
-            let dadosSeparados = dadosInput.split('\n');
-            dados = dados.concat(dadosSeparados.map(item => {
-                return { id: id, nome: nome, funcao: funcao, dados: item };
-            }));
-            exibirDados();
+        function calcularTempoPonto() {
+            const id = document.getElementById("id").value;
+            const nome = document.getElementById("nome").value;
+            const funcao = document.getElementById("funcao").value;
+
+            const dataEntrada = new Date(document.getElementById("dataEntrada").value);
+            const horaInicio = document.getElementById("horaInicio").value;
+
+            const dataSaida = new Date(document.getElementById("dataSaida").value);
+            const horaFechamento = document.getElementById("horaFechamento").value;
+
+            const inicio = new Date(dataEntrada.toDateString() + " " + horaInicio);
+            const fechamento = new Date(dataSaida.toDateString() + " " + horaFechamento);
+
+            const diferencaEmMinutos = (fechamento - inicio) / (1000 * 60);
+            const horas = Math.floor(diferencaEmMinutos / 60);
+            const minutos = diferencaEmMinutos % 60;
+
+            const dataHora = new Date();
+
+            document.getElementById("resultadoHoraPonto").textContent = `${horas} horas e ${minutos} minutos`;
+            document.getElementById("dataHoraPonto").textContent = dataHora.toLocaleString();
+
+            const dataEntradaFormatada = formatarData(dataEntrada);
+            const dataSaidaFormatada = formatarData(dataSaida);
+
+            resultadoPonto = `ID: ${id}
+Nome: ${nome}
+Função: ${funcao}
+Data de Entrada: ${dataEntradaFormatada}
+Hora de Entrada: ${horaInicio}
+Data de Saída: ${dataSaidaFormatada}
+Hora de Saída: ${horaFechamento}
+Resultado do Horário de Ponto: ${horas} horas e ${minutos} minutos
+Data e Hora: ${dataHora.toLocaleString()}`;
         }
 
-        function exibirDados() {
-            let lista = document.getElementById("listaDados");
-            lista.innerHTML = "";
-            dados.forEach(item => {
-                let li = document.createElement("li");
-                li.appendChild(document.createTextNode(item.dados));
-                lista.appendChild(li);
-            });
-        }
-
-        function calcularResultados() {
-            let totalMinutos = 0;
-            let diasTrabalhados = new Set();
-
-            dados.forEach(item => {
-                let partes = item.dados.split(' - ');
-                if (partes.length === 2) {
-                    let data = moment(partes[0], 'DD/MM/YYYY');
-                    if (data.isValid()) {
-                        diasTrabalhados.add(data.format('DD/MM/YYYY'));
-                    }
-
-                    let tempo = partes[1].split(' ');
-                    let horas = 0;
-                    let minutos = 0;
-                    for (let i = 0; i < tempo.length; i++) {
-                        if (tempo[i] === 'hora' || tempo[i] === 'horas') {
-                            horas = parseInt(tempo[i - 1]) || 0;
-                        }
-                        if (tempo[i] === 'minuto' || tempo[i] === 'minutos') {
-                            minutos = parseInt(tempo[i - 1]) || 0;
-                        }
-                    }
-                    totalMinutos += horas * 60 + minutos;
-                }
-            });
-
-            let totalHoras = Math.floor(totalMinutos / 60);
-            let totalMinutosExatos = totalMinutos % 60;
-
-            let atingiuMetaHoras = totalHoras >= 7;
-            let atingiuMetaDias = diasTrabalhados.size >= 3;
-
-            let resultado = `Tempo total trabalhado: ${totalHoras} horas e ${totalMinutosExatos} minutos.`;
-            resultado += `<br>`;
-            resultado += `Dias trabalhados: ${diasTrabalhados.size}.`;
-            resultado += `<br>`;
-
-            if (atingiuMetaHoras) {
-                resultado += `A meta de 7 horas foi batida. `;
+        function salvarResultado() {
+            if (resultadoPonto !== "") {
+                const blob = new Blob([resultadoPonto], { type: "text/plain" });
+                const nomeArquivo = document.getElementById("id").value + "_" + document.getElementById("nome").value + "_ponto.txt";
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = nomeArquivo;
+                a.click();
             } else {
-                resultado += `A meta de 7 horas não foi batida. `;
+                alert("Nenhum resultado disponível para salvar. Por favor, calcule o tempo primeiro.");
             }
-
-            if (atingiuMetaDias) {
-                resultado += `A meta de 3 dias foi batida. `;
-            } else {
-                resultado += `A meta de 3 dias não foi batida. `;
-            }
-
-            let justificativa = document.getElementById("justificativaInput").value;
-            if (justificativa.trim() !== '') {
-                resultado += `<br>Justificativa: ${justificativa}`;
-            }
-
-            document.getElementById("resultado").innerHTML = resultado;
         }
 
-        function salvarEmBlocoDeNotas() {
-            let conteudo = `ID: ${document.getElementById("idInput").value}\n`;
-            conteudo += `Nome: ${document.getElementById("nomeInput").value}\n`;
-            conteudo += `Função: ${document.getElementById("funcaoInput").value}\n\n`;
-
-            let justificativa = document.getElementById("justificativaInput").value;
-            if (justificativa.trim() !== '') {
-                conteudo += `Justificativa: ${justificativa}\n\n`;
-            }
-
-            conteudo += `Resultados: ${document.getElementById("resultado").innerText}\n`;
-            conteudo += `Dados:\n`;
-            dados.forEach(item => {
-                conteudo += `${item.dados}\n`;
-            });
-
-            let blob = new Blob([conteudo], { type: 'text/plain' });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement('a');
-            a.href = url;
-            a.download = `${document.getElementById("idInput").value}_${document.getElementById("nomeInput").value}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
+        function formatarData(data) {
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+            return `${dia}/${mes}/${ano}`;
         }
     </script>
-    <center>
-        <img src="https://cdn.discordapp.com/attachments/1121604849159647273/1159490770890403870/hrd-removebg-preview.png?ex=653136ee&is=651ec1ee&hm=e7c110624646f6ef6d9a2825a776b9b84d176745357000158907c7b30814a339&" alt="">
-    </center>
 </body>
 </html>
